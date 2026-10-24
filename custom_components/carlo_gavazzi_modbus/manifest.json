@@ -1,0 +1,28 @@
+{
+  "domain": "carlo_gavazzi_modbus",
+  "name": "Carlo Gavazzi Modbus",
+  "categories": [
+    "energy.meters_monitoring"
+  ],
+  "codeowners": [
+    "@jobhh"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "modbus",
+    "usb"
+  ],
+  "documentation": "https://github.com/jobhh/carlo-gavazzi-modbus-ha",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "loggers": [
+    "carlo_gavazzi_energy_meter_modbus",
+    "modbus_connection",
+    "tmodbus"
+  ],
+  "requirements": [
+    "carlo-gavazzi-energy-meter-modbus==0.1.0"
+  ],
+  "issue_tracker": "https://github.com/jobhh/carlo-gavazzi-modbus-ha/issues",
+  "version": "0.2.0"
+}

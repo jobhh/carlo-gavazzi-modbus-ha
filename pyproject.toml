@@ -1,0 +1,43 @@
+[project]
+name = "carlo-gavazzi-modbus-ha"
+version = "0.2.0"
+description = "Carlo Gavazzi Modbus custom integration for Home Assistant"
+requires-python = ">=3.14.2"
+
+[dependency-groups]
+dev = [
+    # Pins homeassistant==2026.10.2, the release this build targets.
+    "pytest-homeassistant-custom-component==0.13.373",
+    # What the modbus and usb integrations require in that release; the tests
+    # load them as dependencies.
+    "pymodbus==3.13.1",
+    "modbus-connection[tmodbus]==4.12.4",
+    "tmodbus==0.6.2",
+    "aiousbwatcher==1.1.2",
+    "serialx==1.11.0",
+    "syrupy",
+    # The meter library, as the manifest pins it.
+    "carlo-gavazzi-energy-meter-modbus==0.1.0",
+    # The ESPHome serial proxy link, for tests/test_live.py.
+    "aioesphomeapi==46.6.0",
+]
+
+[tool.uv]
+package = false
+# Home Assistant runs on Linux; its pins do not all resolve elsewhere.
+environments = ["sys_platform == 'linux'"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components", "homeassistant", "tests"]
+force-sort-within-sections = true
+combine-as-imports = true

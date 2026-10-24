@@ -1,0 +1,52 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "alarm": {
+        "default": "mdi:alarm-light",
+        "state": {
+          "off": "mdi:alarm-light-off"
+        }
+      },
+      "digital_input": {
+        "default": "mdi:electric-switch-closed",
+        "state": {
+          "off": "mdi:electric-switch"
+        }
+      }
+    },
+    "button": {
+      "reset_demand": {
+        "default": "mdi:restore"
+      },
+      "reset_partial_counters": {
+        "default": "mdi:counter"
+      },
+      "reset_tariff_counters": {
+        "default": "mdi:counter"
+      }
+    },
+    "sensor": {
+      "active_tariff": {
+        "default": "mdi:cash-clock"
+      },
+      "device_state": {
+        "default": "mdi:meter-electric"
+      },
+      "phase_sequence": {
+        "default": "mdi:sine-wave"
+      },
+      "run_hours": {
+        "default": "mdi:timer-outline"
+      },
+      "run_hours_lifetime": {
+        "default": "mdi:timer-outline"
+      },
+      "thd_current_phase": {
+        "default": "mdi:chart-bell-curve"
+      },
+      "thd_voltage_phase": {
+        "default": "mdi:chart-bell-curve"
+      }
+    }
+  }
+}
