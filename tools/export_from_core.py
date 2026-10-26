@@ -26,7 +26,7 @@ import sys
 
 DOMAIN = "carlo_gavazzi_modbus"
 REPO = "https://github.com/jobhh/carlo-gavazzi-modbus-ha"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 ROOT = Path(__file__).parent.parent
 TARGET = ROOT / "custom_components" / DOMAIN
@@ -196,22 +196,23 @@ def add_update_interval_option() -> None:
     coordinator = TARGET / "coordinator.py"
     replace(
         coordinator,
-        "from dataclasses import dataclass\n",
-        "from dataclasses import dataclass\nfrom datetime import timedelta\n",
+        "from .const import DOMAIN, LOGGER, SCAN_INTERVAL, SETTINGS_SCAN_INTERVAL\n",
+        "from .const import (\n"
+        "    CONF_SCAN_INTERVAL,\n"
+        "    DOMAIN,\n"
+        "    LOGGER,\n"
+        "    SCAN_INTERVAL,\n"
+        "    SETTINGS_SCAN_INTERVAL,\n"
+        ")\n",
     )
     replace(
         coordinator,
-        "from .const import DOMAIN, LOGGER, SCAN_INTERVAL\n",
-        "from .const import CONF_SCAN_INTERVAL, DOMAIN, LOGGER, SCAN_INTERVAL\n",
-    )
-    replace(
-        coordinator,
-        "            update_interval=SCAN_INTERVAL,\n",
-        "            update_interval=timedelta(\n"
-        "                seconds=entry.options.get(\n"
-        "                    CONF_SCAN_INTERVAL, SCAN_INTERVAL.total_seconds()\n"
-        "                )\n"
-        "            ),\n",
+        "        interval=SCAN_INTERVAL,\n",
+        "        interval=timedelta(\n"
+        "            seconds=entry.options.get(\n"
+        "                CONF_SCAN_INTERVAL, SCAN_INTERVAL.total_seconds()\n"
+        "            )\n"
+        "        ),\n",
     )
 
     flow = TARGET / "config_flow.py"
@@ -304,7 +305,7 @@ class CarloGavazziModbusOptionsFlowHandler(OptionsFlowWithReload):
             return self.async_create_entry(data=user_input)
         duration = "unknown"
         if self.config_entry.state is ConfigEntryState.LOADED:
-            coordinator = self.config_entry.runtime_data.coordinator
+            coordinator = self.config_entry.runtime_data.readings
             if coordinator.last_poll_duration is not None:
                 milliseconds = coordinator.last_poll_duration.total_seconds() * 1000
                 duration = f"{milliseconds:.0f} ms"

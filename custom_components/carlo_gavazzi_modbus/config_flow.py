@@ -173,6 +173,10 @@ class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         """Return the options flow."""
         return CarloGavazziModbusOptionsFlowHandler()
 
+    # What the form's errors name, such as the model code of a device that
+    # answers but is not a supported meter.
+    _placeholders: dict[str, str]
+
     @override
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -199,6 +203,7 @@ class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Ask for the link settings, then probe the meter behind them."""
         errors: dict[str, str] = {}
+        self._placeholders = {}
 
         if user_input is not None:
             data = _flatten(connection_type, user_input)
@@ -214,6 +219,7 @@ class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
                 SCHEMAS[connection_type], user_input
             ),
             errors=errors,
+            description_placeholders=self._placeholders,
         )
 
     async def async_step_reconfigure(
@@ -225,6 +231,7 @@ class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         stay the same meter: the probed serial number has to match the entry.
         """
         errors: dict[str, str] = {}
+        self._placeholders = {}
         entry = self._get_reconfigure_entry()
         connection_type = entry.data[CONF_TYPE]
 
@@ -258,6 +265,7 @@ class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
                 SCHEMAS[connection_type], user_input or _sectioned(entry.data)
             ),
             errors=errors,
+            description_placeholders=self._placeholders,
         )
 
     async def _async_validate(
@@ -273,7 +281,8 @@ class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
             # HomeAssistantError: the port is already in use at other line
             # settings, which one connection cannot honour.
             return {"base": "cannot_connect"}, None
-        except UnsupportedMeterError:
+        except UnsupportedMeterError as err:
+            self._placeholders = {"code": str(err.code)}
             return {"base": "unsupported_meter"}, None
 
         if not meter.serial_number:
@@ -293,7 +302,7 @@ class CarloGavazziModbusOptionsFlowHandler(OptionsFlowWithReload):
             return self.async_create_entry(data=user_input)
         duration = "unknown"
         if self.config_entry.state is ConfigEntryState.LOADED:
-            coordinator = self.config_entry.runtime_data.coordinator
+            coordinator = self.config_entry.runtime_data.readings
             if coordinator.last_poll_duration is not None:
                 milliseconds = coordinator.last_poll_duration.total_seconds() * 1000
                 duration = f"{milliseconds:.0f} ms"

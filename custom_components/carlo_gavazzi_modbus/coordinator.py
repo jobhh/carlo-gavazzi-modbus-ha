@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import timedelta
 import time
-from typing import override
+from typing import ClassVar, override
 
 from carlo_gavazzi_energy_meter_modbus import (
     EM500Meter,
@@ -17,10 +17,17 @@ from modbus_connection import ModbusError
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CONF_SCAN_INTERVAL, DOMAIN, LOGGER, SCAN_INTERVAL
+from .const import (
+    CONF_SCAN_INTERVAL,
+    DOMAIN,
+    LOGGER,
+    SCAN_INTERVAL,
+    SETTINGS_SCAN_INTERVAL,
+)
 
 type CarloGavazziModbusConfigEntry = ConfigEntry[CarloGavazziModbusRuntimeData]
 
@@ -38,11 +45,16 @@ def _merge(first: UpdateReport, retry: UpdateReport) -> UpdateReport:
 
 
 class CarloGavazziModbusDataUpdateCoordinator(DataUpdateCoordinator[UpdateReport]):
-    """Polls what a Carlo Gavazzi meter measures.
+    """Polls a set of a Carlo Gavazzi meter's sub-systems.
 
     A poll can come back partial: the library reads every sub-system on its
     own, and the report names what refreshed, which is what entities read
     their availability from.
+
+    The meter's serial number is read at setup, and again once the link comes
+    back after nothing answered: replacing a meter takes it off the bus, and
+    the one put in its place at the same address must not carry on under the
+    old one's entities.
 
     Only what enabled entities show is read. Each entity names its field when
     it is added; a sub-system nobody wants is skipped, and the others are read
@@ -52,19 +64,25 @@ class CarloGavazziModbusDataUpdateCoordinator(DataUpdateCoordinator[UpdateReport
 
     config_entry: CarloGavazziModbusConfigEntry
 
+    narrows: ClassVar[bool] = True
+    """Whether the sub-systems are cut down to what enabled entities show."""
+
     def __init__(
         self,
         hass: HomeAssistant,
         entry: CarloGavazziModbusConfigEntry,
         meter: Meter,
+        *,
+        names: tuple[str, ...],
+        interval: timedelta,
+        name: str,
     ) -> None:
         """Initialize the coordinator."""
         self.meter = meter
         self.last_poll_duration: timedelta | None = None
         self._silent: set[str] = set()
-        self._readings: tuple[str, ...] = (
-            em500.READINGS if isinstance(meter, EM500Meter) else em300.READINGS
-        )
+        self._check_identity = False
+        self._names = names
         # Until the entities are added, which happens after the first poll,
         # every sub-system is read.
         self._wanted: dict[str, set[str]] = {}
@@ -73,13 +91,14 @@ class CarloGavazziModbusDataUpdateCoordinator(DataUpdateCoordinator[UpdateReport
             hass,
             LOGGER,
             config_entry=entry,
-            name=entry.title,
-            update_interval=timedelta(
-                seconds=entry.options.get(
-                    CONF_SCAN_INTERVAL, SCAN_INTERVAL.total_seconds()
-                )
-            ),
+            name=name,
+            update_interval=interval,
         )
+
+    @property
+    def subsystems(self) -> tuple[str, ...]:
+        """Return the sub-systems this coordinator polls."""
+        return self._names
 
     @callback
     def async_want(self, subsystem: str, field: str) -> CALLBACK_TYPE:
@@ -117,16 +136,19 @@ class CarloGavazziModbusDataUpdateCoordinator(DataUpdateCoordinator[UpdateReport
     @override
     async def _async_update_data(self) -> UpdateReport:
         """Poll the meter, reporting what answered."""
-        names = self._readings
-        if self._wanted:
+        names = self._names
+        if self.narrows and self._wanted:
             if not self._narrowed:
                 self._narrow()
             names = tuple(name for name in names if self._wanted.get(name))
 
         start = time.monotonic()
         try:
+            if self._check_identity:
+                await self._async_check_identity()
             report = await self.meter.async_poll(names)
         except ModbusError as err:
+            self._check_identity = True
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="communication_error",
@@ -143,6 +165,20 @@ class CarloGavazziModbusDataUpdateCoordinator(DataUpdateCoordinator[UpdateReport
         self._log_silence(report)
         return report
 
+    async def _async_check_identity(self) -> None:
+        """Read the serial number, and stop if another meter answers.
+
+        Stays due until it passes, so a wrong meter keeps the entities
+        unavailable for as long as it is there.
+        """
+        await self.meter.identity.async_update()
+        if self.meter.serial_number != self.config_entry.unique_id:
+            raise ConfigEntryError(
+                translation_domain=DOMAIN,
+                translation_key="wrong_meter",
+            )
+        self._check_identity = False
+
     async def _async_retry(
         self, report: UpdateReport, names: Iterable[str]
     ) -> UpdateReport:
@@ -155,6 +191,7 @@ class CarloGavazziModbusDataUpdateCoordinator(DataUpdateCoordinator[UpdateReport
             retried = await self.meter.async_poll(names)
         except ModbusError as err:
             LOGGER.debug("%s: the retry failed (%s); keeping the poll", self.name, err)
+            self._check_identity = True
             return report
         return _merge(report, retried)
 
@@ -175,9 +212,89 @@ class CarloGavazziModbusDataUpdateCoordinator(DataUpdateCoordinator[UpdateReport
             LOGGER.info("%s: %s is answering again", self.name, subsystem)
 
 
+def _layout(meter: Meter) -> tuple[int | None, bool | None, bool | None]:
+    """What of the meter's settings decides which entities it has."""
+    return meter.phases, meter.has_neutral, meter.measures_export
+
+
+class CarloGavazziModbusSettingsCoordinator(CarloGavazziModbusDataUpdateCoordinator):
+    """Polls how a Carlo Gavazzi meter is configured.
+
+    The settings are read at setup, and the entities follow from them: a
+    meter wired without a neutral has no phase-to-neutral voltages, and one
+    counting everything as imported no exported energy. They only change on
+    the meter's own keys, so they are read seldom, and a change that alters
+    the entities reloads the entry.
+
+    Everything is read whatever the entities show, since the reload depends
+    on it.
+    """
+
+    narrows = False
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: CarloGavazziModbusConfigEntry,
+        meter: Meter,
+    ) -> None:
+        """Initialize the coordinator."""
+        super().__init__(
+            hass,
+            entry,
+            meter,
+            names=em500.SETTINGS if isinstance(meter, EM500Meter) else em300.SETTINGS,
+            interval=SETTINGS_SCAN_INTERVAL,
+            name=f"{entry.title} settings",
+        )
+        self._layout = _layout(meter)
+
+    @override
+    async def _async_update_data(self) -> UpdateReport:
+        """Poll the settings, and reload when the entities no longer fit."""
+        report = await super()._async_update_data()
+        if _layout(self.meter) != self._layout:
+            LOGGER.info(
+                "%s: the meter's measuring settings changed, reloading to match",
+                self.name,
+            )
+            self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
+        return report
+
+
+def create_readings_coordinator(
+    hass: HomeAssistant, entry: CarloGavazziModbusConfigEntry, meter: Meter
+) -> CarloGavazziModbusDataUpdateCoordinator:
+    """Return the coordinator polling what the meter measures."""
+    return CarloGavazziModbusDataUpdateCoordinator(
+        hass,
+        entry,
+        meter,
+        names=em500.READINGS if isinstance(meter, EM500Meter) else em300.READINGS,
+        interval=timedelta(
+            seconds=entry.options.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL.total_seconds())
+        ),
+        name=entry.title,
+    )
+
+
 @dataclass(kw_only=True)
 class CarloGavazziModbusRuntimeData:
     """Runtime data for a Carlo Gavazzi Modbus config entry."""
 
-    coordinator: CarloGavazziModbusDataUpdateCoordinator
+    readings: CarloGavazziModbusDataUpdateCoordinator
+    settings: CarloGavazziModbusSettingsCoordinator
     device_info: DeviceInfo
+
+    @property
+    def meter(self) -> Meter:
+        """Return the polled meter, which both coordinators share."""
+        return self.readings.meter
+
+    def coordinator_for(
+        self, subsystem: str
+    ) -> CarloGavazziModbusDataUpdateCoordinator:
+        """Return the coordinator that refreshes a given sub-system."""
+        if subsystem in self.settings.subsystems:
+            return self.settings
+        return self.readings

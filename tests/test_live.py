@@ -87,7 +87,7 @@ async def test_live_meter(
 
     entry = result["result"]
     assert entry.state is ConfigEntryState.LOADED
-    coordinator = entry.runtime_data.coordinator
+    coordinator = entry.runtime_data.readings
     meter = coordinator.meter
     assert meter.model is not None
     print(f"\n{meter.model.name} {meter.firmware_version}")
@@ -103,6 +103,14 @@ async def test_live_meter(
     print(
         "polls of what the enabled entities show:", [f"{d:.0f} ms" for d in durations]
     )
+
+    # The settings are read at setup; read them once more the way their slow
+    # poll does.
+    settings = entry.runtime_data.settings
+    await settings.async_refresh()
+    assert settings.last_update_success
+    assert settings.data.updated == {"settings"}
+    print(f"settings poll: {settings.last_poll_duration}")
 
     states = {
         entity.entity_id: hass.states.get(entity.entity_id)

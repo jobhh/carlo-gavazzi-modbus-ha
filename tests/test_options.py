@@ -17,7 +17,7 @@ async def test_default_update_interval(
     hass: HomeAssistant, init_integration: MockConfigEntry
 ) -> None:
     """Test the readings are polled at the default interval without options."""
-    coordinator = init_integration.runtime_data.coordinator
+    coordinator = init_integration.runtime_data.readings
     assert coordinator.update_interval == SCAN_INTERVAL
 
 
@@ -51,5 +51,5 @@ async def test_options_set_the_update_interval(
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert init_integration.options == {CONF_SCAN_INTERVAL: 1}
     assert init_integration.state is ConfigEntryState.LOADED
-    coordinator = init_integration.runtime_data.coordinator
+    coordinator = init_integration.runtime_data.readings
     assert coordinator.update_interval == timedelta(seconds=1)

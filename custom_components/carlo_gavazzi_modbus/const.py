@@ -28,3 +28,6 @@ SCAN_INTERVAL: Final = timedelta(seconds=5)
 CONF_SCAN_INTERVAL: Final = "scan_interval"
 MIN_SCAN_INTERVAL: Final = 1
 MAX_SCAN_INTERVAL: Final = 300
+
+# The settings only change on the meter's own keys.
+SETTINGS_SCAN_INTERVAL: Final = timedelta(minutes=10)
