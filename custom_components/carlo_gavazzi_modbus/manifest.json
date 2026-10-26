@@ -1,9 +1,6 @@
 {
   "domain": "carlo_gavazzi_modbus",
   "name": "Carlo Gavazzi Modbus",
-  "categories": [
-    "energy.meters_monitoring"
-  ],
   "codeowners": [
     "@jobhh"
   ],

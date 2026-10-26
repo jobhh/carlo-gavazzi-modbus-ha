@@ -159,6 +159,16 @@ def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
 
 
 @pytest.fixture
+def snapshot(snapshot: SnapshotAssertion) -> SnapshotAssertion:
+    """Use Home Assistant's snapshot format.
+
+    The custom-component plugin overrides syrupy's fixture too, but which of
+    the two wins depends on the order the plugins load in.
+    """
+    return snapshot.use_extension(HomeAssistantSnapshotExtension)
+
+
+@pytest.fixture
 def entity_registry_enabled_by_default() -> Generator[None]:
     """Enable every entity, including the ones disabled by default."""
     with patch(
@@ -174,6 +184,15 @@ def entity_registry_enabled_by_default() -> Generator[None]:
         conftest,
         "from unittest.mock import AsyncMock, patch\n",
         "from unittest.mock import AsyncMock, PropertyMock, patch\n",
+    )
+    replace(
+        conftest,
+        "from pytest_homeassistant_custom_component.common import MockConfigEntry\n",
+        "from pytest_homeassistant_custom_component.common import MockConfigEntry\n"
+        "from pytest_homeassistant_custom_component.syrupy import (\n"
+        "    HomeAssistantSnapshotExtension,\n"
+        ")\n"
+        "from syrupy.assertion import SnapshotAssertion\n",
     )
 
 
@@ -352,6 +371,8 @@ def adapt_manifest() -> None:
     """Point the manifest at this repository and give it a version."""
     path = TARGET / "manifest.json"
     manifest = json.loads(path.read_text())
+    # Hassfest's schema for custom integrations does not know categories yet.
+    del manifest["categories"]
     manifest["documentation"] = REPO
     manifest["issue_tracker"] = f"{REPO}/issues"
     manifest["version"] = VERSION
