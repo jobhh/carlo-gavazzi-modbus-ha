@@ -378,6 +378,9 @@ def adapt_manifest() -> None:
     manifest["version"] = VERSION
     # Core's own keys; a custom integration has no quality scale.
     manifest.pop("quality_scale", None)
+    # Hassfest wants domain and name first, then the rest in order.
+    first = {key: manifest.pop(key) for key in ("domain", "name")}
+    manifest = first | dict(sorted(manifest.items()))
     path.write_text(json.dumps(manifest, indent=2) + "\n", newline="\n")
 
 

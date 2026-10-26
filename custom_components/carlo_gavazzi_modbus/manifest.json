@@ -12,6 +12,7 @@
   "documentation": "https://github.com/jobhh/carlo-gavazzi-modbus-ha",
   "integration_type": "device",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/jobhh/carlo-gavazzi-modbus-ha/issues",
   "loggers": [
     "carlo_gavazzi_energy_meter_modbus",
     "modbus_connection",
@@ -20,6 +21,5 @@
   "requirements": [
     "carlo-gavazzi-energy-meter-modbus==0.1.1"
   ],
-  "issue_tracker": "https://github.com/jobhh/carlo-gavazzi-modbus-ha/issues",
   "version": "0.4.1"
 }
