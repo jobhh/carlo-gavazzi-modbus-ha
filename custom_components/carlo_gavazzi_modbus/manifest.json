@@ -24,5 +24,5 @@
     "carlo-gavazzi-energy-meter-modbus==0.1.0"
   ],
   "issue_tracker": "https://github.com/jobhh/carlo-gavazzi-modbus-ha/issues",
-  "version": "0.2.0"
+  "version": "0.3.0"
 }

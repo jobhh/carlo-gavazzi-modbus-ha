@@ -63,18 +63,24 @@ from 1 to 300 seconds. Use 1 second for something like battery control. This
 option exists only in this custom build: Home Assistant core does not let
 integrations make their polling interval configurable.
 
+Only what the enabled entities show is read: a block no enabled entity uses
+is skipped. The **Configure** dialog shows how long the last poll took; keep the
+interval longer than that.
+
 Measured on an EM540 (firmware 1.4.3) behind a wired ESPHome serial proxy:
 
-| Baud rate | One full readings poll |
+| Baud rate | Poll with every entity enabled |
 | --- | --- |
 | 9600 | about 1.05 s |
 | 38400 | about 0.56 s |
 | 57600 | about 0.51 s |
 | 115200 | about 0.45 s |
 
-The meter refreshes its values every 80 ms. At 9600 baud a full poll takes
-longer than a second, so for a 1-second interval set the meter to 38400 baud
-or faster.
+With the default entities, a poll at 57600 baud takes about 0.16 s.
+
+The meter refreshes its values every 80 ms. At 9600 baud a poll of every
+entity takes longer than a second, so for a 1-second interval set the meter to
+38400 baud or faster, or keep the extra entities disabled.
 
 ## Good to know
 

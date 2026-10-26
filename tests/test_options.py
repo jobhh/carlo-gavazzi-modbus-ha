@@ -21,6 +21,18 @@ async def test_default_update_interval(
     assert coordinator.update_interval == SCAN_INTERVAL
 
 
+async def test_options_of_an_unloaded_entry(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """Test the options can be set while the meter is not set up."""
+    mock_config_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["description_placeholders"] == {"duration": "unknown"}
+
+
 async def test_options_set_the_update_interval(
     hass: HomeAssistant, init_integration: MockConfigEntry
 ) -> None:
@@ -28,6 +40,8 @@ async def test_options_set_the_update_interval(
     result = await hass.config_entries.options.async_init(init_integration.entry_id)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
+    # The form says how long the first poll took.
+    assert result["description_placeholders"]["duration"].endswith(" ms")
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {CONF_SCAN_INTERVAL: 1}

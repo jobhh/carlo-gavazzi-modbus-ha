@@ -9,6 +9,7 @@ from pytest_homeassistant_custom_component.components.diagnostics import (
 )
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 from syrupy.assertion import SnapshotAssertion
+from syrupy.filters import props
 
 from homeassistant.core import HomeAssistant
 
@@ -21,10 +22,13 @@ async def test_diagnostics(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test the diagnostics hold the decoded values and the raw registers."""
-    assert (
-        await get_diagnostics_for_config_entry(hass, hass_client, init_integration)
-        == snapshot
+    diagnostics = await get_diagnostics_for_config_entry(
+        hass, hass_client, init_integration
     )
+
+    # How long the poll took depends on the machine running the test.
+    assert isinstance(diagnostics["poll"]["duration"], float)
+    assert diagnostics == snapshot(exclude=props("duration"))
 
 
 async def test_diagnostics_meter_not_answering(

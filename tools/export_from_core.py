@@ -26,7 +26,7 @@ import sys
 
 DOMAIN = "carlo_gavazzi_modbus"
 REPO = "https://github.com/jobhh/carlo-gavazzi-modbus-ha"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 ROOT = Path(__file__).parent.parent
 TARGET = ROOT / "custom_components" / DOMAIN
@@ -299,14 +299,21 @@ class CarloGavazziModbusOptionsFlowHandler(OptionsFlowWithReload):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask for the update interval."""
+        """Ask for the update interval, showing how long a poll takes."""
         if user_input is not None:
             return self.async_create_entry(data=user_input)
+        duration = "unknown"
+        if self.config_entry.state is ConfigEntryState.LOADED:
+            coordinator = self.config_entry.runtime_data.coordinator
+            if coordinator.last_poll_duration is not None:
+                milliseconds = coordinator.last_poll_duration.total_seconds() * 1000
+                duration = f"{milliseconds:.0f} ms"
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
                 OPTIONS_SCHEMA, self.config_entry.options
             ),
+            description_placeholders={"duration": duration},
         )
 ''',
         newline="\n",
@@ -326,6 +333,11 @@ class CarloGavazziModbusOptionsFlowHandler(OptionsFlowWithReload):
                         " baud or faster for that."
                     )
                 },
+                "description": (
+                    "The last poll of this meter took {duration}. Polls queue up"
+                    " behind each other, so set the interval longer than that."
+                    " Enabling more entities makes a poll take longer."
+                ),
                 "title": "Update interval",
             }
         }

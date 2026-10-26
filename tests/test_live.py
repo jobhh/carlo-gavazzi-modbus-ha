@@ -62,7 +62,6 @@ def expected_lingering_timers() -> bool:
     return True
 
 
-@pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_live_meter(
     hass: HomeAssistant, entity_registry: er.EntityRegistry
 ) -> None:
@@ -88,9 +87,22 @@ async def test_live_meter(
 
     entry = result["result"]
     assert entry.state is ConfigEntryState.LOADED
-    meter = entry.runtime_data.coordinator.meter
+    coordinator = entry.runtime_data.coordinator
+    meter = coordinator.meter
     assert meter.model is not None
     print(f"\n{meter.model.name} {meter.firmware_version}")
+    print(f"first poll, every block: {coordinator.last_poll_duration}")
+
+    # The first poll ran before the entities said what they show; time a few
+    # polls of just that.
+    durations = []
+    for _ in range(5):
+        await coordinator.async_refresh()
+        assert coordinator.last_poll_duration is not None
+        durations.append(coordinator.last_poll_duration.total_seconds() * 1000)
+    print(
+        "polls of what the enabled entities show:", [f"{d:.0f} ms" for d in durations]
+    )
 
     states = {
         entity.entity_id: hass.states.get(entity.entity_id)

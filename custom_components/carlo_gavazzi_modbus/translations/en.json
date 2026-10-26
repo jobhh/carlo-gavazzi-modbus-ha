@@ -239,6 +239,7 @@
         "data_description": {
           "scan_interval": "How often power, energy and the meter's status are read, in seconds. Use 1 second for battery control; at 9600 baud a full read takes about a second, so set the meter to 38400 baud or faster for that."
         },
+        "description": "The last poll of this meter took {duration}. Polls queue up behind each other, so set the interval longer than that. Enabling more entities makes a poll take longer.",
         "title": "Update interval"
       }
     }
