@@ -1,6 +1,6 @@
 [project]
 name = "carlo-gavazzi-modbus-ha"
-version = "0.4.0"
+version = "0.4.1"
 description = "Carlo Gavazzi Modbus custom integration for Home Assistant"
 requires-python = ">=3.14.2"
 
@@ -17,7 +17,7 @@ dev = [
     "serialx==1.11.0",
     "syrupy",
     # The meter library, as the manifest pins it.
-    "carlo-gavazzi-energy-meter-modbus==0.1.0",
+    "carlo-gavazzi-energy-meter-modbus==0.1.1",
     # The ESPHome serial proxy link, for tests/test_live.py.
     "aioesphomeapi==46.6.0",
 ]

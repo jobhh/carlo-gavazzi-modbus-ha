@@ -21,8 +21,8 @@
     "tmodbus"
   ],
   "requirements": [
-    "carlo-gavazzi-energy-meter-modbus==0.1.0"
+    "carlo-gavazzi-energy-meter-modbus==0.1.1"
   ],
   "issue_tracker": "https://github.com/jobhh/carlo-gavazzi-modbus-ha/issues",
-  "version": "0.4.0"
+  "version": "0.4.1"
 }

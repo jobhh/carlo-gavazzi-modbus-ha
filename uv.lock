@@ -595,19 +595,19 @@ wheels = [
 
 [[package]]
 name = "carlo-gavazzi-energy-meter-modbus"
-version = "0.1.0"
+version = "0.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "modbus-connection", extra = ["tmodbus"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0c/8c/a4441f425ae2fd502665ec6b76d7133144ead995442dcc0407f465716c83/carlo_gavazzi_energy_meter_modbus-0.1.0.tar.gz", hash = "sha256:c4dd469c2df13f82bc64462304c39239ff4424f848cda4a2ac5bddbbf748074c", size = 66669, upload-time = "2026-10-24T12:39:38.65Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/90/8f83a9615347e67f0c1a22a7c17bbd9d61dd4565b600ba9ad88b18737eff/carlo_gavazzi_energy_meter_modbus-0.1.1.tar.gz", hash = "sha256:b83906fe4b09476fb57761c9076b23468ef94641aa563ba4fcaf9473e9750483", size = 66605, upload-time = "2026-10-26T14:40:18.288Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/4b/b5b472e061af905e1f83f8acfad3b7f99e7724896ac05a0efea1acdcb338/carlo_gavazzi_energy_meter_modbus-0.1.0-py3-none-any.whl", hash = "sha256:c5ac412a2957275d8821bc2c805b9930991a0d089324a61d8a4d01ce7814599e", size = 31909, upload-time = "2026-10-24T12:39:37.426Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/16/70e14f4230943164fdccb35a8ded0f513769a610ac6fe892d43114352daf/carlo_gavazzi_energy_meter_modbus-0.1.1-py3-none-any.whl", hash = "sha256:27a2fb96ada5c9d4f2efd416c471c392cbf69336e370387a457e12355cd10428", size = 31822, upload-time = "2026-10-26T14:40:17.023Z" },
 ]
 
 [[package]]
 name = "carlo-gavazzi-modbus-ha"
-version = "0.4.0"
+version = "0.4.1"
 source = { virtual = "." }
 
 [package.dev-dependencies]
@@ -629,7 +629,7 @@ dev = [
 dev = [
     { name = "aioesphomeapi", specifier = "==46.6.0" },
     { name = "aiousbwatcher", specifier = "==1.1.2" },
-    { name = "carlo-gavazzi-energy-meter-modbus", specifier = "==0.1.0" },
+    { name = "carlo-gavazzi-energy-meter-modbus", specifier = "==0.1.1" },
     { name = "modbus-connection", extras = ["tmodbus"], specifier = "==4.12.4" },
     { name = "pymodbus", specifier = "==3.13.1" },
     { name = "pytest-homeassistant-custom-component", specifier = "==0.13.373" },
