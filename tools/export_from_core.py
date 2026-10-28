@@ -26,7 +26,7 @@ import sys
 
 DOMAIN = "carlo_gavazzi_modbus"
 REPO = "https://github.com/jobhh/carlo-gavazzi-modbus-ha"
-VERSION = "0.4.1"
+VERSION = "0.4.2"
 
 ROOT = Path(__file__).parent.parent
 TARGET = ROOT / "custom_components" / DOMAIN
