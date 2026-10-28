@@ -76,7 +76,7 @@ async def test_live_meter(
         result["flow_id"],
         {
             CONF_DEVICE: LIVE_DEVICE,
-            CONF_BAUDRATE: int(os.environ.get("CG_LIVE_BAUDRATE", "9600")),
+            CONF_BAUDRATE: os.environ.get("CG_LIVE_BAUDRATE", "9600"),
             SECTION_MORE_OPTIONS: {
                 CONF_UNIT_ID: int(os.environ.get("CG_LIVE_UNIT_ID", "1"))
             },
