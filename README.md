@@ -139,15 +139,23 @@ adds what you send back to what you take.
 
 ## Update interval
 
-The readings are polled every 5 seconds. To change that, open the
-integration's **Configure** dialog and set the update interval, from 1 to 300
-seconds. Use 1 second for something like battery control. This option is
-specific to this custom integration: Home Assistant core does not let
-integrations make their polling interval configurable.
+The readings are polled every 2 seconds by default. Set the **Update
+interval** while adding the meter, or later in the integration's
+**Configure** dialog, from 0.01 to 300 seconds. Use 1 second or less for
+something like battery control. This option is specific to this custom
+integration: Home Assistant core does not let integrations make their polling
+interval configurable.
 
 Only what the enabled entities show is read: a block no enabled entity uses is
-skipped. The **Configure** dialog shows how long the last poll took; keep the
-interval longer than that.
+skipped. The **Configure** dialog shows how long the last poll took.
+
+An interval shorter than a poll takes is allowed, but you are warned first,
+with the poll time estimated for the baud rate (or, in **Configure**, the
+last poll measured). Updates cannot come faster than a poll takes: Home
+Assistant starts the interval when a poll ends, so the meter is then read
+without pause, other devices on the same bus wait longer for their turn, and
+every update writes new states to the database. Behind an RS485-to-TCP gateway
+the baud rate is not known at setup, so the check waits for **Configure**.
 
 Measured on an EM540 (firmware 1.4.3) behind a wired ESPHome serial proxy:
 

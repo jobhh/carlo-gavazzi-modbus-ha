@@ -26,11 +26,12 @@ import sys
 
 DOMAIN = "carlo_gavazzi_modbus"
 REPO = "https://github.com/jobhh/carlo-gavazzi-modbus-ha"
-VERSION = "0.4.3"
+VERSION = "0.5.0"
 
 ROOT = Path(__file__).parent.parent
 TARGET = ROOT / "custom_components" / DOMAIN
 TESTS = ROOT / "tests"
+OVERLAY = ROOT / "tools" / "overlay"
 TOOLS = Path(__file__).parent
 
 
@@ -206,60 +207,27 @@ def entity_registry_enabled_by_default() -> Generator[None]:
 
 
 def add_update_interval_option() -> None:
-    """Let the update interval be set, which core does not allow."""
-    replace(
-        TARGET / "const.py",
-        "# A full poll takes about a second at the factory 9600 baud.\n"
-        "SCAN_INTERVAL: Final = timedelta(seconds=5)\n",
-        "# A full poll takes about a second at the factory 9600 baud.\n"
-        "SCAN_INTERVAL: Final = timedelta(seconds=5)\n"
-        "\n"
-        "# How often the readings are polled, set in the options. A meter steering a\n"
-        "# battery needs a reading every second or faster.\n"
-        'CONF_SCAN_INTERVAL: Final = "scan_interval"\n'
-        "MIN_SCAN_INTERVAL: Final = 1\n"
-        "MAX_SCAN_INTERVAL: Final = 300\n",
-    )
+    """Let the update interval be set, which core does not allow.
+
+    The logic lives in ``tools/overlay/interval.py``; this copies it in and
+    hooks it into the coordinator and the config flow.
+    """
+    shutil.copy(OVERLAY / "interval.py", TARGET / "interval.py")
 
     coordinator = TARGET / "coordinator.py"
     replace(
         coordinator,
         "from .const import DOMAIN, LOGGER, SCAN_INTERVAL, SETTINGS_SCAN_INTERVAL\n",
-        "from .const import (\n"
-        "    CONF_SCAN_INTERVAL,\n"
-        "    DOMAIN,\n"
-        "    LOGGER,\n"
-        "    SCAN_INTERVAL,\n"
-        "    SETTINGS_SCAN_INTERVAL,\n"
-        ")\n",
+        "from .const import DOMAIN, LOGGER, SETTINGS_SCAN_INTERVAL\n"
+        "from .interval import scan_interval\n",
     )
     replace(
         coordinator,
         "        interval=SCAN_INTERVAL,\n",
-        "        interval=timedelta(\n"
-        "            seconds=entry.options.get(\n"
-        "                CONF_SCAN_INTERVAL, SCAN_INTERVAL.total_seconds()\n"
-        "            )\n"
-        "        ),\n",
+        "        interval=scan_interval(entry),\n",
     )
 
     flow = TARGET / "config_flow.py"
-    replace(
-        flow,
-        "from homeassistant.config_entries import (\n"
-        "    ConfigEntry,\n"
-        "    ConfigEntryState,\n"
-        "    ConfigFlow,\n"
-        "    ConfigFlowResult,\n"
-        ")\n",
-        "from homeassistant.config_entries import (\n"
-        "    ConfigEntry,\n"
-        "    ConfigEntryState,\n"
-        "    ConfigFlow,\n"
-        "    ConfigFlowResult,\n"
-        "    OptionsFlowWithReload,\n"
-        ")\n",
-    )
     replace(
         flow,
         "from homeassistant.exceptions import HomeAssistantError\n",
@@ -268,41 +236,30 @@ def add_update_interval_option() -> None:
     )
     replace(
         flow,
-        "    CONF_BAUDRATE,\n    CONF_UNIT_ID,\n",
-        "    CONF_BAUDRATE,\n    CONF_SCAN_INTERVAL,\n    CONF_UNIT_ID,\n",
-    )
-    replace(
-        flow,
-        "    DOMAIN,\n    TYPE_GATEWAY,\n",
-        "    DOMAIN,\n"
-        "    MAX_SCAN_INTERVAL,\n"
-        "    MIN_SCAN_INTERVAL,\n"
-        "    SCAN_INTERVAL,\n"
-        "    TYPE_GATEWAY,\n",
-    )
-    replace(
-        flow,
-        "SCHEMAS = {TYPE_SERIAL: STEP_SERIAL, TYPE_GATEWAY: STEP_GATEWAY}\n",
-        "SCHEMAS = {TYPE_SERIAL: STEP_SERIAL, TYPE_GATEWAY: STEP_GATEWAY}\n"
-        "\n"
-        "OPTIONS_SCHEMA = probatio.Schema(\n"
-        "    {\n"
-        "        probatio.Required(\n"
-        "            CONF_SCAN_INTERVAL, default=int(SCAN_INTERVAL.total_seconds())\n"
-        "        ): probatio.All(\n"
-        "            NumberSelector(\n"
-        "                NumberSelectorConfig(\n"
-        "                    min=MIN_SCAN_INTERVAL,\n"
-        "                    max=MAX_SCAN_INTERVAL,\n"
-        "                    step=1,\n"
-        "                    mode=NumberSelectorMode.BOX,\n"
-        '                    unit_of_measurement="s",\n'
-        "                )\n"
-        "            ),\n"
-        "            probatio.Coerce(int),\n"
-        "        ),\n"
-        "    }\n"
+        "from .helpers import async_setup_meter, create_modbus_params\n",
+        "from .helpers import async_setup_meter, create_modbus_params\n"
+        "from .interval import (\n"
+        "    CarloGavazziModbusOptionsFlowHandler,\n"
+        "    IntervalFlowMixin,\n"
+        "    with_interval,\n"
         ")\n",
+    )
+    replace(
+        flow,
+        "class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):\n",
+        "class CarloGavazziModbusFlowHandler(IntervalFlowMixin, domain=DOMAIN):\n",
+    )
+    replace(
+        flow,
+        "                return self.async_create_entry(title=meter_name(meter), data=data)\n",
+        "                return await self.async_create_entry_with_interval(\n"
+        "                    title=meter_name(meter), data=data\n"
+        "                )\n",
+    )
+    replace(
+        flow,
+        "                SCHEMAS[connection_type], user_input\n",
+        "                with_interval(SCHEMAS[connection_type]), user_input\n",
     )
     replace(
         flow,
@@ -318,62 +275,70 @@ def add_update_interval_option() -> None:
         "        return CarloGavazziModbusOptionsFlowHandler()\n"
         "\n",
     )
-    flow.write_text(
-        flow.read_text()
-        + '''
-
-class CarloGavazziModbusOptionsFlowHandler(OptionsFlowWithReload):
-    """Set how often the readings are polled; the entry reloads on save."""
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Ask for the update interval, showing how long a poll takes."""
-        if user_input is not None:
-            return self.async_create_entry(data=user_input)
-        duration = "unknown"
-        if self.config_entry.state is ConfigEntryState.LOADED:
-            coordinator = self.config_entry.runtime_data.readings
-            if coordinator.last_poll_duration is not None:
-                milliseconds = coordinator.last_poll_duration.total_seconds() * 1000
-                duration = f"{milliseconds:.0f} ms"
-        return self.async_show_form(
-            step_id="init",
-            data_schema=self.add_suggested_values_to_schema(
-                OPTIONS_SCHEMA, self.config_entry.options
-            ),
-            description_placeholders={"duration": duration},
-        )
-''',
-        newline="\n",
-    )
 
     translations = TARGET / "translations" / "en.json"
     data = json.loads(translations.read_text())
+    steps = data["config"]["step"]
+    for step in ("serial", "gateway"):
+        steps[step]["data"]["scan_interval"] = INTERVAL_LABEL
+        steps[step]["data_description"]["scan_interval"] = INTERVAL_DESCRIPTION
+    steps["interval_warning"] = {
+        "title": WARNING_TITLE,
+        "description": WARNING_DESCRIPTION.format(poll="{poll} at {baudrate} baud"),
+        "menu_options": {
+            "interval_keep": KEEP_LABEL,
+            "interval_change": CHANGE_LABEL,
+        },
+    }
+    steps["interval_change"] = {
+        "title": "Update interval",
+        "data": {"scan_interval": INTERVAL_LABEL},
+        "data_description": {"scan_interval": INTERVAL_DESCRIPTION},
+    }
     data["options"] = {
         "step": {
             "init": {
-                "data": {"scan_interval": "Readings update interval"},
-                "data_description": {
-                    "scan_interval": (
-                        "How often power, energy and the meter's status are read, in"
-                        " seconds. Use 1 second for battery control; at 9600 baud a"
-                        " full read takes about a second, so set the meter to 38400"
-                        " baud or faster for that."
-                    )
-                },
-                "description": (
-                    "The last poll of this meter took {duration}. Polls queue up"
-                    " behind each other, so set the interval longer than that."
-                    " Enabling more entities makes a poll take longer."
-                ),
                 "title": "Update interval",
-            }
+                "description": (
+                    "A poll of this meter takes {duration}. Enabling more"
+                    " entities makes a poll take longer."
+                ),
+                "data": {"scan_interval": INTERVAL_LABEL},
+                "data_description": {"scan_interval": INTERVAL_DESCRIPTION},
+            },
+            "warning": {
+                "title": WARNING_TITLE,
+                "description": WARNING_DESCRIPTION.format(poll="{poll}"),
+                "menu_options": {"keep": KEEP_LABEL, "init": CHANGE_LABEL},
+            },
         }
     }
     translations.write_text(
         json.dumps(data, indent=2, ensure_ascii=False) + "\n", newline="\n"
     )
+
+
+INTERVAL_LABEL = "Update interval"
+INTERVAL_DESCRIPTION = (
+    "How often power, energy and the meter's status are read, in seconds."
+    " The default is 2 seconds. Use 1 second or less for something like"
+    " battery control, with the meter at 38400 baud or faster."
+)
+WARNING_TITLE = "Short update interval"
+WARNING_DESCRIPTION = (
+    "You set the readings to update every {{interval}}, but a poll of the"
+    " meter takes {poll}.\n\n"
+    "- Updates will not come faster than a poll takes. Home Assistant starts"
+    " the interval when a poll ends, so the meter is read without pause, and"
+    " other devices on the same bus wait longer for their turn.\n"
+    "- Every update writes new states to Home Assistant's database, which"
+    " grows quickly at this rate. Consider excluding the sensors you do not"
+    " need from the recorder.\n\n"
+    "Raising the baud rate on the meter, and then here with Reconfigure,"
+    " makes a poll quicker."
+)
+KEEP_LABEL = "Keep this interval"
+CHANGE_LABEL = "Change the interval"
 
 
 def adapt_manifest() -> None:

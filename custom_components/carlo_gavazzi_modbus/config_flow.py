@@ -11,9 +11,7 @@ from homeassistant.components.modbus import async_get_temporary_unit
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigEntryState,
-    ConfigFlow,
     ConfigFlowResult,
-    OptionsFlowWithReload,
 )
 from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_PORT, CONF_TYPE
 from homeassistant.core import callback
@@ -33,20 +31,21 @@ from homeassistant.helpers.selector import (
 from .const import (
     BAUDRATES,
     CONF_BAUDRATE,
-    CONF_SCAN_INTERVAL,
     CONF_UNIT_ID,
     DEFAULT_BAUDRATE,
     DEFAULT_PORT,
     DEFAULT_UNIT_ID,
     DOMAIN,
-    MAX_SCAN_INTERVAL,
-    MIN_SCAN_INTERVAL,
-    SCAN_INTERVAL,
     TYPE_GATEWAY,
     TYPE_SERIAL,
 )
 from .entity import meter_name
 from .helpers import async_setup_meter, create_modbus_params
+from .interval import (
+    CarloGavazziModbusOptionsFlowHandler,
+    IntervalFlowMixin,
+    with_interval,
+)
 
 SECTION_MORE_OPTIONS = "more_options"
 
@@ -107,25 +106,6 @@ STEP_GATEWAY = probatio.Schema(
 
 SCHEMAS = {TYPE_SERIAL: STEP_SERIAL, TYPE_GATEWAY: STEP_GATEWAY}
 
-OPTIONS_SCHEMA = probatio.Schema(
-    {
-        probatio.Required(
-            CONF_SCAN_INTERVAL, default=int(SCAN_INTERVAL.total_seconds())
-        ): probatio.All(
-            NumberSelector(
-                NumberSelectorConfig(
-                    min=MIN_SCAN_INTERVAL,
-                    max=MAX_SCAN_INTERVAL,
-                    step=1,
-                    mode=NumberSelectorMode.BOX,
-                    unit_of_measurement="s",
-                )
-            ),
-            probatio.Coerce(int),
-        ),
-    }
-)
-
 
 def _flatten(connection_type: str, user_input: dict[str, Any]) -> dict[str, Any]:
     """Flatten the sectioned form input into config entry data."""
@@ -173,7 +153,7 @@ def _needs_relink(entry: ConfigEntry, data: Mapping[str, Any]) -> bool:
     return new.endpoint == current.endpoint and new != current
 
 
-class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
+class CarloGavazziModbusFlowHandler(IntervalFlowMixin, domain=DOMAIN):
     """Handle a Carlo Gavazzi Modbus config flow."""
 
     VERSION = 1
@@ -224,12 +204,14 @@ class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
             if meter is not None:
                 await self.async_set_unique_id(meter.serial_number)
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(title=meter_name(meter), data=data)
+                return await self.async_create_entry_with_interval(
+                    title=meter_name(meter), data=data
+                )
 
         return self.async_show_form(
             step_id=connection_type,
             data_schema=self.add_suggested_values_to_schema(
-                SCHEMAS[connection_type], user_input
+                with_interval(SCHEMAS[connection_type]), user_input
             ),
             errors=errors,
             description_placeholders=self._placeholders,
@@ -302,27 +284,3 @@ class CarloGavazziModbusFlowHandler(ConfigFlow, domain=DOMAIN):
             return {"base": "no_serial_number"}, None
 
         return {}, meter
-
-
-class CarloGavazziModbusOptionsFlowHandler(OptionsFlowWithReload):
-    """Set how often the readings are polled; the entry reloads on save."""
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Ask for the update interval, showing how long a poll takes."""
-        if user_input is not None:
-            return self.async_create_entry(data=user_input)
-        duration = "unknown"
-        if self.config_entry.state is ConfigEntryState.LOADED:
-            coordinator = self.config_entry.runtime_data.readings
-            if coordinator.last_poll_duration is not None:
-                milliseconds = coordinator.last_poll_duration.total_seconds() * 1000
-                duration = f"{milliseconds:.0f} ms"
-        return self.async_show_form(
-            step_id="init",
-            data_schema=self.add_suggested_values_to_schema(
-                OPTIONS_SCHEMA, self.config_entry.options
-            ),
-            description_placeholders={"duration": duration},
-        )

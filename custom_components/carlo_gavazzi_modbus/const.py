@@ -26,11 +26,5 @@ DEFAULT_PORT: Final = 502
 # A full poll takes about a second at the factory 9600 baud.
 SCAN_INTERVAL: Final = timedelta(seconds=5)
 
-# How often the readings are polled, set in the options. A meter steering a
-# battery needs a reading every second or faster.
-CONF_SCAN_INTERVAL: Final = "scan_interval"
-MIN_SCAN_INTERVAL: Final = 1
-MAX_SCAN_INTERVAL: Final = 300
-
 # The settings only change on the meter's own keys.
 SETTINGS_SCAN_INTERVAL: Final = timedelta(minutes=10)

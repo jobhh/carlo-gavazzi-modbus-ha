@@ -13,11 +13,13 @@
       "gateway": {
         "data": {
           "host": "Host",
-          "port": "Port"
+          "port": "Port",
+          "scan_interval": "Update interval"
         },
         "data_description": {
           "host": "The hostname or IP address of the RS485-to-TCP gateway.",
-          "port": "The port the gateway listens on."
+          "port": "The port the gateway listens on.",
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
         },
         "description": "Set up a Carlo Gavazzi energy meter, such as an EM540 or ET340, behind an RS485-to-TCP gateway in transparent (RTU) mode. Set the gateway's serial side to the meter's baud rate.",
         "sections": {
@@ -61,11 +63,13 @@
       "serial": {
         "data": {
           "baudrate": "Baud rate",
-          "device": "Serial port"
+          "device": "Serial port",
+          "scan_interval": "Update interval"
         },
         "data_description": {
           "baudrate": "The baud rate set on the meter, under rS485. The factory default is 9600. Type another rate if your bus runs at one the meters do not list.",
-          "device": "The serial port the meter's RS485 bus is wired to. ESPHome serial proxies are listed here too."
+          "device": "The serial port the meter's RS485 bus is wired to. ESPHome serial proxies are listed here too.",
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
         },
         "description": "Set up a Carlo Gavazzi energy meter, such as an EM540 or ET340, wired to a serial port or an ESPHome serial proxy.",
         "sections": {
@@ -86,6 +90,23 @@
           "serial": "Serial port or ESPHome serial proxy"
         },
         "title": "How is the meter's RS485 bus reached?"
+      },
+      "interval_warning": {
+        "title": "Short update interval",
+        "description": "You set the readings to update every {interval}, but a poll of the meter takes {poll} at {baudrate} baud.\n\n- Updates will not come faster than a poll takes. Home Assistant starts the interval when a poll ends, so the meter is read without pause, and other devices on the same bus wait longer for their turn.\n- Every update writes new states to Home Assistant's database, which grows quickly at this rate. Consider excluding the sensors you do not need from the recorder.\n\nRaising the baud rate on the meter, and then here with Reconfigure, makes a poll quicker.",
+        "menu_options": {
+          "interval_keep": "Keep this interval",
+          "interval_change": "Change the interval"
+        }
+      },
+      "interval_change": {
+        "title": "Update interval",
+        "data": {
+          "scan_interval": "Update interval"
+        },
+        "data_description": {
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
+        }
       }
     }
   },
@@ -272,14 +293,22 @@
   "options": {
     "step": {
       "init": {
+        "title": "Update interval",
+        "description": "A poll of this meter takes {duration}. Enabling more entities makes a poll take longer.",
         "data": {
-          "scan_interval": "Readings update interval"
+          "scan_interval": "Update interval"
         },
         "data_description": {
-          "scan_interval": "How often power, energy and the meter's status are read, in seconds. Use 1 second for battery control; at 9600 baud a full read takes about a second, so set the meter to 38400 baud or faster for that."
-        },
-        "description": "The last poll of this meter took {duration}. Polls queue up behind each other, so set the interval longer than that. Enabling more entities makes a poll take longer.",
-        "title": "Update interval"
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
+        }
+      },
+      "warning": {
+        "title": "Short update interval",
+        "description": "You set the readings to update every {interval}, but a poll of the meter takes {poll}.\n\n- Updates will not come faster than a poll takes. Home Assistant starts the interval when a poll ends, so the meter is read without pause, and other devices on the same bus wait longer for their turn.\n- Every update writes new states to Home Assistant's database, which grows quickly at this rate. Consider excluding the sensors you do not need from the recorder.\n\nRaising the baud rate on the meter, and then here with Reconfigure, makes a poll quicker.",
+        "menu_options": {
+          "keep": "Keep this interval",
+          "init": "Change the interval"
+        }
       }
     }
   }

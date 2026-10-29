@@ -21,13 +21,8 @@ from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import (
-    CONF_SCAN_INTERVAL,
-    DOMAIN,
-    LOGGER,
-    SCAN_INTERVAL,
-    SETTINGS_SCAN_INTERVAL,
-)
+from .const import DOMAIN, LOGGER, SETTINGS_SCAN_INTERVAL
+from .interval import scan_interval
 
 type CarloGavazziModbusConfigEntry = ConfigEntry[CarloGavazziModbusRuntimeData]
 
@@ -271,9 +266,7 @@ def create_readings_coordinator(
         entry,
         meter,
         names=em500.READINGS if isinstance(meter, EM500Meter) else em300.READINGS,
-        interval=timedelta(
-            seconds=entry.options.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL.total_seconds())
-        ),
+        interval=scan_interval(entry),
         name=entry.title,
     )
 
