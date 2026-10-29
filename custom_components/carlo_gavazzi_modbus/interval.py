@@ -6,7 +6,7 @@ configurable, so none of this is in core; the export copies this module in.
 The interval is asked for while setting up and in the options. An interval
 shorter than a poll takes is allowed, but warned about first: Home Assistant
 starts the interval when a poll ends, so the meter is then read without pause,
-and every update writes new states to the database.
+and values that change on every read add a state to the database each time.
 """
 
 from __future__ import annotations

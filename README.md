@@ -82,8 +82,10 @@ Modbus**, and pick how the bus is reached:
   proxies are listed with the ESPHome device's port name. Home Assistant then
   tries each baud rate the meters offer (9600 to 115200) and fills in the one
   the meter answered at, which takes up to about 5 seconds. If none answers,
-  it says so: check the Modbus address and the wiring, or pick the rate
-  yourself.
+  it says so and offers two ways on: search every Modbus address at every
+  rate, which takes up to about 6 minutes and helps when the meter's address
+  was changed, or enter the rate yourself. Check the wiring first: swapping A
+  and B is worth a try.
 - **RS485-to-TCP gateway:** enter the gateway's host and port (often `502`).
   Set the gateway's serial side to the meter's baud rate, 8N1.
 
@@ -157,9 +159,12 @@ An interval shorter than a poll takes is allowed, but you are warned first,
 with the poll time estimated for the baud rate (or, in **Configure**, the
 last poll measured). Updates cannot come faster than a poll takes: Home
 Assistant starts the interval when a poll ends, so the meter is then read
-without pause, other devices on the same bus wait longer for their turn, and
-every update writes new states to the database. Behind an RS485-to-TCP gateway
-the baud rate is not known at setup, so the check waits for **Configure**.
+without pause, and other devices on the same bus wait longer for their turn.
+Home Assistant records a new state each time a value changes, and power,
+current and voltage change on almost every read, so a short interval adds
+many rows to the database; consider excluding the sensors you do not need from
+the recorder. Behind an RS485-to-TCP gateway the baud rate is not known at
+setup, so the check waits for **Configure**.
 
 Measured on an EM540 (firmware 1.4.3) behind a wired ESPHome serial proxy:
 
@@ -191,8 +196,9 @@ reloads by itself.
   away. If it still does not answer, only its entities become unavailable.
 - After the meter has stopped answering, its serial number is read again
   before new readings are taken. If a different meter answers at the address,
-  for example after a replacement, its entities stay unavailable and the log
-  says so. Set the new meter up as a new entry.
+  for example after a replacement, its entities stay unavailable and
+  **Settings → Repairs** says so. Set the new meter up as a new entry, or, if
+  two meters share the address, give each its own and choose **Reconfigure**.
 - Several meters on one bus, each with its own address, can each be set up as
   their own entry. They share one connection and take turns on the bus.
 - **Download diagnostics** on the device page reads every register the meter

@@ -1,0 +1,51 @@
+name: Release
+
+# Pushing a version tag, such as 0.7.0, publishes its release with the
+# integration zipped for installing by hand. A release made on GitHub first,
+# with a new tag, gets the zip added the same way.
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check the tag matches the manifest version
+        run: |
+          version=$(jq -r .version custom_components/carlo_gavazzi_modbus/manifest.json)
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME, but the manifest says $version."
+            exit 1
+          fi
+
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: uv run pytest
+
+      - name: Zip the integration
+        # Unpacked into custom_components, this gives
+        # custom_components/carlo_gavazzi_modbus/manifest.json.
+        working-directory: custom_components
+        run: zip -r ../carlo_gavazzi_modbus.zip carlo_gavazzi_modbus -x "*/__pycache__/*"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" carlo_gavazzi_modbus.zip --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" carlo_gavazzi_modbus.zip \
+              --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+          fi

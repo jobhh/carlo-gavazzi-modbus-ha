@@ -26,7 +26,7 @@ import sys
 
 DOMAIN = "carlo_gavazzi_modbus"
 REPO = "https://github.com/jobhh/carlo-gavazzi-modbus-ha"
-VERSION = "0.6.1"
+VERSION = "0.7.0"
 
 ROOT = Path(__file__).parent.parent
 TARGET = ROOT / "custom_components" / DOMAIN
@@ -116,11 +116,11 @@ def target_release() -> None:
         "    hass: HomeAssistant, entry: CarloGavazziModbusConfigEntry\n) -> bool:\n"
         '    """Set up Carlo Gavazzi Modbus from a config entry."""',
     )
+    # At the end of setting up, which reaches past the platforms' setup.
     replace(
         init,
-        "    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)\n",
-        "    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)\n"
-        "    return True\n",
+        "\n\nasync def async_unload_entry(",
+        "    return True\n\n\nasync def async_unload_entry(",
     )
     replace(
         init,
@@ -337,9 +337,10 @@ WARNING_DESCRIPTION = (
     "- Updates will not come faster than a poll takes. Home Assistant starts"
     " the interval when a poll ends, so the meter is read without pause, and"
     " other devices on the same bus wait longer for their turn.\n"
-    "- Every update writes new states to Home Assistant's database, which"
-    " grows quickly at this rate. Consider excluding the sensors you do not"
-    " need from the recorder.\n\n"
+    "- Home Assistant records a new state each time a value changes. Power,"
+    " current and voltage change on almost every read, so at this rate they"
+    " add many rows to the database. Consider excluding the sensors you do"
+    " not need from the recorder.\n\n"
     "Raising the baud rate on the meter, and then here with Reconfigure,"
     " makes a poll quicker."
 )
