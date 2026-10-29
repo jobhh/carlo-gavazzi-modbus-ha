@@ -48,13 +48,22 @@ def copy_integration(core: Path) -> None:
     source = core / "homeassistant" / "components" / DOMAIN
     if not (source / "translations" / "en.json").exists():
         raise SystemExit("generate the translations in core first")
-    shutil.rmtree(TARGET, ignore_errors=True)
+    # The brand images are this repository's own; core keeps them in the
+    # brands repository instead.
+    for path in TARGET.iterdir() if TARGET.exists() else ():
+        if path.name == "brand":
+            continue
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
     shutil.copytree(
         source,
         TARGET,
         ignore=shutil.ignore_patterns(
             "__pycache__", "strings.json", "quality_scale.yaml"
         ),
+        dirs_exist_ok=True,
     )
 
 
