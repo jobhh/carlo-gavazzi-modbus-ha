@@ -5,6 +5,7 @@
       "wrong_meter": "A different meter answers at this address than the one this entry was set up for. Reconfigure the entry to point at the right meter."
     },
     "error": {
+      "baudrate_not_detected": "No device answered on that port at any of the listed baud rates, at the Modbus address you entered. Check the address and the wiring, or pick the meter's baud rate yourself.",
       "cannot_connect": "Failed to connect",
       "no_serial_number": "The meter did not report a serial number, which is needed to identify it.",
       "unsupported_meter": "A device answers there, but its model code {code} is not one of the supported meters: the EM530, EM540, EM330, EM340, ET330 and ET340."
@@ -62,16 +63,12 @@
       },
       "serial": {
         "data": {
-          "baudrate": "Baud rate",
-          "device": "Serial port",
-          "scan_interval": "Update interval"
+          "device": "Serial port"
         },
         "data_description": {
-          "baudrate": "The baud rate set on the meter, under rS485. The factory default is 9600. Type another rate if your bus runs at one the meters do not list.",
-          "device": "The serial port the meter's RS485 bus is wired to. ESPHome serial proxies are listed here too.",
-          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
+          "device": "The serial port the meter's RS485 bus is wired to. ESPHome serial proxies are listed here too."
         },
-        "description": "Set up a Carlo Gavazzi energy meter, such as an EM540 or ET340, wired to a serial port or an ESPHome serial proxy.",
+        "description": "Set up a Carlo Gavazzi energy meter, such as an EM540 or ET340, wired to a serial port or an ESPHome serial proxy. Home Assistant then looks for the baud rate the meter is set to.",
         "sections": {
           "more_options": {
             "data": {
@@ -83,6 +80,18 @@
             "name": "More options"
           }
         }
+      },
+      "serial_baudrate": {
+        "data": {
+          "baudrate": "Baud rate",
+          "scan_interval": "Update interval"
+        },
+        "data_description": {
+          "baudrate": "The baud rate set on the meter, under rS485. The factory default is 9600. Type another rate if your bus runs at one the meters do not list.",
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
+        },
+        "description": "Home Assistant tried each baud rate the meters offer, and filled in the one the meter answered at.",
+        "title": "Baud rate"
       },
       "user": {
         "menu_options": {

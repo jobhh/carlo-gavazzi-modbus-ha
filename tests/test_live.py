@@ -76,11 +76,22 @@ async def test_live_meter(
         result["flow_id"],
         {
             CONF_DEVICE: LIVE_DEVICE,
-            CONF_BAUDRATE: os.environ.get("CG_LIVE_BAUDRATE", "9600"),
             SECTION_MORE_OPTIONS: {
                 CONF_UNIT_ID: int(os.environ.get("CG_LIVE_UNIT_ID", "1"))
             },
         },
+    )
+    # Home Assistant looked for the meter's baud rate on the port.
+    assert result["step_id"] == "serial_baudrate", result
+    assert result["errors"] == {}, result
+    baudrate = next(
+        key for key in result["data_schema"].schema if key == CONF_BAUDRATE
+    ).description["suggested_value"]
+    print(f"\ndetected baud rate: {baudrate}")
+    if expected := os.environ.get("CG_LIVE_BAUDRATE"):
+        assert baudrate == expected
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_BAUDRATE: baudrate}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY, result
     await hass.async_block_till_done()

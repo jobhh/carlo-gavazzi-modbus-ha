@@ -78,8 +78,12 @@ what the integration uses.
 Then go to **Settings → Devices & services → Add integration → Carlo Gavazzi
 Modbus**, and pick how the bus is reached:
 
-- **Serial port or ESPHome serial proxy:** pick the port, and enter the baud
-  rate. ESPHome serial proxies are listed with the ESPHome device's port name.
+- **Serial port or ESPHome serial proxy:** pick the port. ESPHome serial
+  proxies are listed with the ESPHome device's port name. Home Assistant then
+  tries each baud rate the meters offer (9600 to 115200) and fills in the one
+  the meter answered at, which takes up to about 5 seconds. If none answers,
+  it says so: check the Modbus address and the wiring, or pick the rate
+  yourself.
 - **RS485-to-TCP gateway:** enter the gateway's host and port (often `502`).
   Set the gateway's serial side to the meter's baud rate, 8N1.
 

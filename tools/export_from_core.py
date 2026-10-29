@@ -26,7 +26,7 @@ import sys
 
 DOMAIN = "carlo_gavazzi_modbus"
 REPO = "https://github.com/jobhh/carlo-gavazzi-modbus-ha"
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 
 ROOT = Path(__file__).parent.parent
 TARGET = ROOT / "custom_components" / DOMAIN
@@ -258,8 +258,10 @@ def add_update_interval_option() -> None:
     )
     replace(
         flow,
-        "                SCHEMAS[connection_type], user_input\n",
-        "                with_interval(SCHEMAS[connection_type]), user_input\n",
+        "            data_schema=self.add_suggested_values_to_schema(schema, suggested_values),\n",
+        "            data_schema=self.add_suggested_values_to_schema(\n"
+        "                with_interval(schema), suggested_values\n"
+        "            ),\n",
     )
     replace(
         flow,
@@ -279,7 +281,7 @@ def add_update_interval_option() -> None:
     translations = TARGET / "translations" / "en.json"
     data = json.loads(translations.read_text())
     steps = data["config"]["step"]
-    for step in ("serial", "gateway"):
+    for step in ("serial_baudrate", "gateway"):
         steps[step]["data"]["scan_interval"] = INTERVAL_LABEL
         steps[step]["data_description"]["scan_interval"] = INTERVAL_DESCRIPTION
     steps["interval_warning"] = {

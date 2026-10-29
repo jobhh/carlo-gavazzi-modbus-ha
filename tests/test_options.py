@@ -25,26 +25,23 @@ from homeassistant.data_entry_flow import FlowResultType
 from .conftest import BAUDRATE, DEVICE, SERIAL_NUMBER, UNIT_ID
 
 
-def _serial_input(**overrides: object) -> dict[str, object]:
-    """Return the serial form input for the seeded meter."""
-    return {
-        CONF_DEVICE: DEVICE,
-        CONF_BAUDRATE: str(BAUDRATE),
-        SECTION_MORE_OPTIONS: {CONF_UNIT_ID: UNIT_ID},
-        **overrides,
-    }
-
-
 async def _submit_serial(hass: HomeAssistant, **overrides: object) -> dict:
-    """Start a setup on the serial port and submit the form."""
+    """Set up on the serial port, submitting the baud rate step with overrides."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "serial"}
     )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_DEVICE: DEVICE, SECTION_MORE_OPTIONS: {CONF_UNIT_ID: UNIT_ID}},
+    )
+    # The interval is asked for with the baud rate.
+    assert result["step_id"] == "serial_baudrate"
+    assert CONF_SCAN_INTERVAL in result["data_schema"].schema
     return await hass.config_entries.flow.async_configure(
-        result["flow_id"], _serial_input(**overrides)
+        result["flow_id"], {CONF_BAUDRATE: str(BAUDRATE), **overrides}
     )
 
 
