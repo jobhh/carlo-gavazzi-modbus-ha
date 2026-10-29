@@ -20,7 +20,7 @@ from custom_components.carlo_gavazzi_modbus.interval import (
 from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 
 from .conftest import BAUDRATE, DEVICE, SERIAL_NUMBER, UNIT_ID
 
@@ -46,9 +46,13 @@ async def _submit_serial(hass: HomeAssistant, **overrides: object) -> dict:
 
 
 def test_estimate_poll() -> None:
-    """Test the estimate matches the poll measured at 57600 baud, about 160 ms."""
+    """Test the estimate matches the poll measured at 57600 baud, about 160 ms.
+
+    The field's description quotes these figures.
+    """
     assert estimate_poll(57600) == pytest.approx(0.16, abs=0.005)
-    assert estimate_poll(9600) > estimate_poll(57600)
+    assert estimate_poll(38400) == pytest.approx(0.19, abs=0.005)
+    assert estimate_poll(9600) == pytest.approx(0.42, abs=0.005)
 
 
 async def test_default_update_interval(
@@ -62,12 +66,31 @@ async def test_default_update_interval(
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_setup_asks_for_the_interval(hass: HomeAssistant) -> None:
     """Test the interval set while setting up lands in the options."""
-    result = await _submit_serial(hass, **{CONF_SCAN_INTERVAL: 1})
+    result = await _submit_serial(hass, **{CONF_SCAN_INTERVAL: "1"})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].unique_id == SERIAL_NUMBER
     assert CONF_SCAN_INTERVAL not in result["data"]
     assert result["options"] == {CONF_SCAN_INTERVAL: 1.0}
+
+
+@pytest.mark.usefixtures("mock_setup_entry")
+async def test_setup_takes_a_decimal_comma(hass: HomeAssistant) -> None:
+    """Test an interval typed with a decimal comma is read as seconds."""
+    result = await _submit_serial(hass, **{CONF_SCAN_INTERVAL: "1,5"})
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["result"].unique_id == SERIAL_NUMBER
+    assert result["options"] == {CONF_SCAN_INTERVAL: 1.5}
+
+
+@pytest.mark.parametrize("interval", ["fast", "0", "301"])
+async def test_setup_refuses_an_invalid_interval(
+    hass: HomeAssistant, interval: str
+) -> None:
+    """Test an interval that is no number of seconds in range is refused."""
+    with pytest.raises(InvalidData):
+        await _submit_serial(hass, **{CONF_SCAN_INTERVAL: interval})
 
 
 @pytest.mark.usefixtures("mock_setup_entry")
@@ -83,7 +106,7 @@ async def test_setup_defaults_to_2_seconds(hass: HomeAssistant) -> None:
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_setup_warns_about_a_short_interval(hass: HomeAssistant) -> None:
     """Test an interval shorter than a poll warns, and can be kept."""
-    result = await _submit_serial(hass, **{CONF_SCAN_INTERVAL: 0.01})
+    result = await _submit_serial(hass, **{CONF_SCAN_INTERVAL: "0.01"})
 
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "interval_warning"
@@ -104,7 +127,7 @@ async def test_setup_warns_about_a_short_interval(hass: HomeAssistant) -> None:
 @pytest.mark.usefixtures("mock_setup_entry")
 async def test_setup_warning_lets_the_interval_change(hass: HomeAssistant) -> None:
     """Test the warning offers another interval, which is checked again."""
-    result = await _submit_serial(hass, **{CONF_SCAN_INTERVAL: 0.01})
+    result = await _submit_serial(hass, **{CONF_SCAN_INTERVAL: "0.01"})
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "interval_change"}
     )
@@ -113,14 +136,14 @@ async def test_setup_warning_lets_the_interval_change(hass: HomeAssistant) -> No
 
     # Still too short: warned again.
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SCAN_INTERVAL: 0.1}
+        result["flow_id"], {CONF_SCAN_INTERVAL: "0.1"}
     )
     assert result["type"] is FlowResultType.MENU
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": "interval_change"}
     )
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_SCAN_INTERVAL: 0.5}
+        result["flow_id"], {CONF_SCAN_INTERVAL: "0.5"}
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -143,7 +166,7 @@ async def test_setup_behind_a_gateway_does_not_warn(hass: HomeAssistant) -> None
             CONF_HOST: "gateway.local",
             CONF_PORT: 502,
             SECTION_MORE_OPTIONS: {CONF_UNIT_ID: UNIT_ID},
-            CONF_SCAN_INTERVAL: 0.01,
+            CONF_SCAN_INTERVAL: "0.01",
         },
     )
 
@@ -177,7 +200,7 @@ async def test_options_set_the_update_interval(
     assert result["description_placeholders"]["duration"].endswith(", the last poll")
 
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_SCAN_INTERVAL: 1}
+        result["flow_id"], {CONF_SCAN_INTERVAL: "1"}
     )
     await hass.async_block_till_done()
 
@@ -196,7 +219,7 @@ async def test_options_warn_about_a_short_interval(
     with patch.object(coordinator, "last_poll_duration", timedelta(seconds=0.5)):
         result = await hass.config_entries.options.async_init(init_integration.entry_id)
         result = await hass.config_entries.options.async_configure(
-            result["flow_id"], {CONF_SCAN_INTERVAL: 0.25}
+            result["flow_id"], {CONF_SCAN_INTERVAL: "0.25"}
         )
         assert result["type"] is FlowResultType.MENU
         assert result["step_id"] == "warning"
@@ -211,7 +234,7 @@ async def test_options_warn_about_a_short_interval(
         )
         assert result["type"] is FlowResultType.FORM
         result = await hass.config_entries.options.async_configure(
-            result["flow_id"], {CONF_SCAN_INTERVAL: 0.25}
+            result["flow_id"], {CONF_SCAN_INTERVAL: "0.25"}
         )
         result = await hass.config_entries.options.async_configure(
             result["flow_id"], {"next_step_id": "keep"}

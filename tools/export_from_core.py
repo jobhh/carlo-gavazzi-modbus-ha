@@ -26,7 +26,7 @@ import sys
 
 DOMAIN = "carlo_gavazzi_modbus"
 REPO = "https://github.com/jobhh/carlo-gavazzi-modbus-ha"
-VERSION = "0.6.0"
+VERSION = "0.6.1"
 
 ROOT = Path(__file__).parent.parent
 TARGET = ROOT / "custom_components" / DOMAIN
@@ -281,7 +281,7 @@ def add_update_interval_option() -> None:
     translations = TARGET / "translations" / "en.json"
     data = json.loads(translations.read_text())
     steps = data["config"]["step"]
-    for step in ("serial_baudrate", "gateway"):
+    for step in ("serial_baudrate", "serial_baudrate_unknown", "gateway"):
         steps[step]["data"]["scan_interval"] = INTERVAL_LABEL
         steps[step]["data_description"]["scan_interval"] = INTERVAL_DESCRIPTION
     steps["interval_warning"] = {
@@ -322,9 +322,13 @@ def add_update_interval_option() -> None:
 
 INTERVAL_LABEL = "Update interval"
 INTERVAL_DESCRIPTION = (
-    "How often power, energy and the meter's status are read, in seconds."
-    " The default is 2 seconds. Use 1 second or less for something like"
-    " battery control, with the meter at 38400 baud or faster."
+    "How often power, energy and the meter's status are read, in seconds:"
+    " anything from 0.01 to 300, such as 2 or 0.5. The default is 2. Use 1 or"
+    " less for something like battery control.\n\n"
+    "Reading the default sensors takes about 0.42 s at 9600 baud, 0.19 s at"
+    " 38400 and 0.16 s at 57600. A shorter interval than that does not make"
+    " updates faster; if yours is shorter, you are warned after selecting"
+    " Submit."
 )
 WARNING_TITLE = "Short update interval"
 WARNING_DESCRIPTION = (

@@ -23,9 +23,9 @@ from homeassistant.config_entries import (
     OptionsFlowWithReload,
 )
 from homeassistant.helpers.selector import (
-    NumberSelector,
-    NumberSelectorConfig,
-    NumberSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .const import CONF_BAUDRATE
@@ -51,18 +51,23 @@ DEFAULT_POLL_READS: Final = 3
 # where a poll of the default entities took about 160 ms.
 READ_OVERHEAD: Final = 0.036
 
+
+def _seconds(value: Any) -> float:
+    """Read an interval typed in seconds, with a decimal point or comma."""
+    try:
+        return float(str(value).strip().replace(",", "."))
+    except ValueError as err:
+        raise probatio.Invalid("enter a number of seconds, such as 2 or 0.5") from err
+
+
+# A text field rather than a number box: the box's step buttons are no use
+# across 0.01 to 300 seconds, and a decimal comma is welcome too.
 INTERVAL_FIELD = {
-    probatio.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): probatio.All(
-        NumberSelector(
-            NumberSelectorConfig(
-                min=MIN_SCAN_INTERVAL,
-                max=MAX_SCAN_INTERVAL,
-                step=0.01,
-                mode=NumberSelectorMode.BOX,
-                unit_of_measurement="s",
-            )
-        ),
-        probatio.Coerce(float),
+    probatio.Required(
+        CONF_SCAN_INTERVAL, default=f"{DEFAULT_SCAN_INTERVAL:g}"
+    ): probatio.All(
+        TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT, suffix="s")),
+        _seconds,
         probatio.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
     ),
 }
@@ -96,6 +101,11 @@ def _duration(seconds: float) -> str:
 def _interval(seconds: float) -> str:
     """Format an interval without trailing zeros."""
     return f"{seconds:g} s"
+
+
+def _suggested(seconds: float) -> dict[str, str]:
+    """Fill the interval's text field in with a stored interval."""
+    return {CONF_SCAN_INTERVAL: f"{seconds:g}"}
 
 
 class IntervalFlowMixin(ConfigFlow):
@@ -154,7 +164,8 @@ class IntervalFlowMixin(ConfigFlow):
         return self.async_show_form(
             step_id="interval_change",
             data_schema=self.add_suggested_values_to_schema(
-                INTERVAL_SCHEMA, self._pending_entry["options"]
+                INTERVAL_SCHEMA,
+                _suggested(self._pending_entry["options"][CONF_SCAN_INTERVAL]),
             ),
         )
 
@@ -190,11 +201,11 @@ class CarloGavazziModbusOptionsFlowHandler(OptionsFlowWithReload):
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
                 INTERVAL_SCHEMA,
-                {
-                    CONF_SCAN_INTERVAL: self.config_entry.options.get(
+                _suggested(
+                    self.config_entry.options.get(
                         CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
                     )
-                },
+                ),
             ),
             description_placeholders={"duration": poll_text},
         )

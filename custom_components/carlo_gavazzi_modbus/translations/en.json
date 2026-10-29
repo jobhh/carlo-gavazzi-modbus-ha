@@ -5,7 +5,6 @@
       "wrong_meter": "A different meter answers at this address than the one this entry was set up for. Reconfigure the entry to point at the right meter."
     },
     "error": {
-      "baudrate_not_detected": "No device answered on that port at any of the listed baud rates, at the Modbus address you entered. Check the address and the wiring, or pick the meter's baud rate yourself.",
       "cannot_connect": "Failed to connect",
       "no_serial_number": "The meter did not report a serial number, which is needed to identify it.",
       "unsupported_meter": "A device answers there, but its model code {code} is not one of the supported meters: the EM530, EM540, EM330, EM340, ET330 and ET340."
@@ -20,7 +19,7 @@
         "data_description": {
           "host": "The hostname or IP address of the RS485-to-TCP gateway.",
           "port": "The port the gateway listens on.",
-          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds: anything from 0.01 to 300, such as 2 or 0.5. The default is 2. Use 1 or less for something like battery control.\n\nReading the default sensors takes about 0.42 s at 9600 baud, 0.19 s at 38400 and 0.16 s at 57600. A shorter interval than that does not make updates faster; if yours is shorter, you are warned after selecting Submit."
         },
         "description": "Set up a Carlo Gavazzi energy meter, such as an EM540 or ET340, behind an RS485-to-TCP gateway in transparent (RTU) mode. Set the gateway's serial side to the meter's baud rate.",
         "sections": {
@@ -88,10 +87,22 @@
         },
         "data_description": {
           "baudrate": "The baud rate set on the meter, under rS485. The factory default is 9600. Type another rate if your bus runs at one the meters do not list.",
-          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds: anything from 0.01 to 300, such as 2 or 0.5. The default is 2. Use 1 or less for something like battery control.\n\nReading the default sensors takes about 0.42 s at 9600 baud, 0.19 s at 38400 and 0.16 s at 57600. A shorter interval than that does not make updates faster; if yours is shorter, you are warned after selecting Submit."
         },
-        "description": "Home Assistant tried each baud rate the meters offer, and filled in the one the meter answered at.",
-        "title": "Baud rate"
+        "description": "The meter at Modbus address {unit_id} answered at **{baudrate} baud**, so that rate is filled in below.\n\nA meter keeps its baud rate in its own settings, and those can only be read once Home Assistant talks to it at that rate. So it tried each rate the meters offer (9600, 19200, 38400, 57600 and 115200) until the meter answered. Change it only if you know the meter is set to another rate.",
+        "title": "Baud rate found"
+      },
+      "serial_baudrate_unknown": {
+        "data": {
+          "baudrate": "Baud rate",
+          "scan_interval": "Update interval"
+        },
+        "data_description": {
+          "baudrate": "The baud rate set on the meter, under rS485. The factory default is 9600. Type another rate if your bus runs at one the meters do not list.",
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds: anything from 0.01 to 300, such as 2 or 0.5. The default is 2. Use 1 or less for something like battery control.\n\nReading the default sensors takes about 0.42 s at 9600 baud, 0.19 s at 38400 and 0.16 s at 57600. A shorter interval than that does not make updates faster; if yours is shorter, you are warned after selecting Submit."
+        },
+        "description": "No meter answered at Modbus address {unit_id} at any baud rate, so the factory default of {baudrate} baud is filled in below.\n\nA meter keeps its baud rate in its own settings, and those can only be read once Home Assistant talks to it at that rate. So it tried each rate the meters offer (9600, 19200, 38400, 57600 and 115200), and none got an answer. Check that the Modbus address matches the one set on the meter, and the wiring: swapping A and B is worth a try. Or pick the baud rate the meter shows in its setup menu, under rS485.",
+        "title": "Baud rate not found"
       },
       "user": {
         "menu_options": {
@@ -114,7 +125,7 @@
           "scan_interval": "Update interval"
         },
         "data_description": {
-          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds: anything from 0.01 to 300, such as 2 or 0.5. The default is 2. Use 1 or less for something like battery control.\n\nReading the default sensors takes about 0.42 s at 9600 baud, 0.19 s at 38400 and 0.16 s at 57600. A shorter interval than that does not make updates faster; if yours is shorter, you are warned after selecting Submit."
         }
       }
     }
@@ -308,7 +319,7 @@
           "scan_interval": "Update interval"
         },
         "data_description": {
-          "scan_interval": "How often power, energy and the meter's status are read, in seconds. The default is 2 seconds. Use 1 second or less for something like battery control, with the meter at 38400 baud or faster."
+          "scan_interval": "How often power, energy and the meter's status are read, in seconds: anything from 0.01 to 300, such as 2 or 0.5. The default is 2. Use 1 or less for something like battery control.\n\nReading the default sensors takes about 0.42 s at 9600 baud, 0.19 s at 38400 and 0.16 s at 57600. A shorter interval than that does not make updates faster; if yours is shorter, you are warned after selecting Submit."
         }
       },
       "warning": {
