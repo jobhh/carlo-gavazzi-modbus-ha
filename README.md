@@ -10,6 +10,9 @@ These meters are often installed as the grid meter for a home battery or solar
 system, for example with Victron Energy equipment. Home Assistant can read the
 same kind of meter on a bus of its own.
 
+This is a community project. It is not made, supported or endorsed by Carlo
+Gavazzi; their name and logo are used only to say which meters it works with.
+
 ## Supported meters
 
 - **EM530** and **EM540**, including their MID-certified variants.
